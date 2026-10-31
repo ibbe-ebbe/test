@@ -147,6 +147,7 @@ function render(){
     .filter(r=>r.score!=null&&!isNaN(r.score))
     .sort((a,b)=>b.score-a.score);
   board.innerHTML="";
+  if(!rows.length){board.innerHTML='<li style="justify-content:center;color:var(--muted)">No rankings yet</li>';return}
   let rank=0,prev=null;
   rows.forEach((r,i)=>{
     if(r.score!==prev){rank=i+1;prev=r.score}
