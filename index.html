@@ -24,6 +24,11 @@ li:nth-child(3) .rank{color:var(--bronze)}
 #tabs{display:flex;gap:8px;margin-bottom:16px}
 #tabs button{flex:1;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--text);font:inherit;font-weight:600;cursor:pointer}
 #tabs button[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:#fff}
+h2{margin:28px 0 12px;font-size:1.1rem;text-transform:uppercase;letter-spacing:.06em}
+.m{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:10px}
+.m .vs{font-weight:700}
+.m .when{color:var(--muted);font-size:.85rem;margin-top:2px}
+.m .cd{margin-top:8px;font-variant-numeric:tabular-nums;font-weight:700;color:var(--accent);font-size:1.15rem}
 h1{text-transform:uppercase;letter-spacing:.06em}
 .score{font-variant-numeric:tabular-nums;font-weight:700;color:var(--accent)}
 </style>
@@ -35,6 +40,7 @@ h1{text-transform:uppercase;letter-spacing:.06em}
   <div id="status">Loading…</div>
   <div id="tabs"></div>
   <ol id="board"></ol>
+  <div id="matches" hidden></div>
 </main>
 <script>
 // 1) Google Sheet: File > Share > Publish to web > pick the sheet tab > CSV > Publish. Paste the link here.
@@ -43,8 +49,9 @@ const CSV_URLS = [
   "https://docs.google.com/spreadsheets/d/"+SHEET_ID+"/gviz/tq?tqx=out:csv&sheet=Sheet1",
   "https://docs.google.com/spreadsheets/d/"+SHEET_ID+"/export?format=csv"
 ];
+const MATCH_URL = "https://docs.google.com/spreadsheets/d/"+SHEET_ID+"/gviz/tq?tqx=out:csv&sheet=Sheet2";
 const TITLE = "Strength Cartel Armwrestlers";
-const SUBTITLES = {right:"Right Arm Open · Men's Division", left:"Left Arm Open · Men's Division", total:"All Round · Men's Division"};
+const SUBTITLES = {right:"Right Arm Open · Men's Division", left:"Left Arm Open · Men's Division", upcoming:"Upcoming Matches · Men's Division"};
 const DIVISION = "M";           // "M", "F", or "" for everyone
 const MIN_KG = 0, MAX_KG = 999; // weight class filter
 const REFRESH_SECONDS = 60;     // auto-refresh
@@ -67,8 +74,61 @@ function parseCSV(text){
   return rows;
 }
 
-let data=[],mode="right";
-const MODES=[["right","Right arm"],["left","Left arm"],["total","Total"]];
+let data=[],mode="right",matches=[];
+// Sheet2 times are read as Maldives time (UTC+5)
+function parseWhen(dv,tv){
+  dv=(dv||"").trim();tv=(tv||"").trim();let m,y,mo,d,h=0,mi=0;
+  if(m=dv.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/)){y=+m[1];mo=+m[2];d=+m[3]}
+  else if(m=dv.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})/)){const a=+m[1],b=+m[2];y=+m[3];if(b>12){mo=a;d=b}else{d=a;mo=b}} // day-month-year by default
+  else{const x=new Date(dv+" 12:00 UTC");if(isNaN(x))return null;y=x.getUTCFullYear();mo=x.getUTCMonth()+1;d=x.getUTCDate()}
+  if(m=tv.match(/(\d{1,2}):(\d{2})(?::\d{2})?\s*([ap]m)?/i)){
+    h=+m[1];mi=+m[2];
+    if(m[3]){const pm=m[3].toLowerCase()==="pm";if(pm&&h<12)h+=12;if(!pm&&h===12)h=0}
+  }
+  const p=n=>String(n).padStart(2,"0");
+  const t=new Date(y+"-"+p(mo)+"-"+p(d)+"T"+p(h)+":"+p(mi)+":00+05:00");
+  return isNaN(t)?null:t;
+}
+function renderMatches(){
+  const box=document.getElementById("matches"),now=Date.now();
+  const up=matches.filter(x=>x.t.getTime()+2*3600e3>now).sort((a,b)=>a.t-b.t);
+  box.innerHTML="";
+  if(!up.length){box.innerHTML='<div class="m"><span class="when">No upcoming matches yet.</span></div>';return}
+  up.forEach(x=>{
+    const el=document.createElement("div");el.className="m";
+    const vs=document.createElement("div");vs.className="vs";vs.textContent=x.a+" vs "+x.b;
+    const w=document.createElement("div");w.className="when";
+    w.textContent=x.t.toLocaleString([],{weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
+    let extra=null;
+    const info=[x.arm&&(/arm/i.test(x.arm)?x.arm:x.arm+" arm"),x.venue].filter(Boolean).join(" · ");
+    if(info){const i=document.createElement("div");i.className="when";i.textContent=info;extra=i}
+    const cd=document.createElement("div");cd.className="cd";cd.dataset.t=x.t.getTime();
+    el.append(vs,w);if(extra)el.append(extra);el.append(cd);box.append(el);
+  });
+  tick();
+}
+function tick(){
+  document.querySelectorAll(".cd").forEach(e=>{
+    let ms=+e.dataset.t-Date.now();
+    if(ms<=0){e.textContent="LIVE NOW";return}
+    const d=Math.floor(ms/864e5);ms%=864e5;
+    const h=Math.floor(ms/36e5);ms%=36e5;
+    const m=Math.floor(ms/6e4),sec=Math.floor(ms%6e4/1e3),p=n=>String(n).padStart(2,"0");
+    e.textContent=(d?d+"d ":"")+p(h)+":"+p(m)+":"+p(sec);
+  });
+}
+setInterval(tick,1000);
+async function loadMatches(){
+  try{
+    const r=await fetch(MATCH_URL+"&t="+Date.now());
+    if(!r.ok) throw 0;
+    const rows=parseCSV(await r.text()).slice(1);
+    matches=rows.map(r=>({t:parseWhen(r[0],r[1]),venue:(r[2]||"").trim(),a:(r[3]||"").trim(),b:(r[4]||"").trim(),arm:(r[5]||"").trim()}))
+      .filter(x=>x.a&&x.b&&x.t);
+  }catch(e){matches=[]}
+  renderMatches();
+}
+const MODES=[["right","Right arm"],["left","Left arm"],["upcoming","Upcoming"]];
 const tabs=document.getElementById("tabs");
 MODES.forEach(([k,label])=>{
   const b=document.createElement("button");b.textContent=label;
@@ -79,8 +139,11 @@ function render(){
   sub.textContent=SUBTITLES[mode];
   tabs.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.k===mode));
   const board=document.getElementById("board");
+  const up=mode==="upcoming";
+  board.hidden=up;document.getElementById("matches").hidden=!up;
+  if(up){return}
   const rows=data.filter(r=>(!DIVISION||r.gender===DIVISION)&&(r.kg==null||(r.kg>=MIN_KG&&r.kg<=MAX_KG)))
-    .map(r=>({name:r.name,kg:r.kg,score:mode==="total"?(r.left||0)+(r.right||0):r[mode]}))
+    .map(r=>({name:r.name,kg:r.kg,score:r[mode]}))
     .filter(r=>r.score!=null&&!isNaN(r.score))
     .sort((a,b)=>b.score-a.score);
   board.innerHTML="";
@@ -91,8 +154,7 @@ function render(){
     const a=document.createElement("span");a.className="rank";a.textContent=rank;
     const n=document.createElement("span");n.className="name";n.textContent=r.name;
     if(r.kg!=null){const w=document.createElement("small");w.style.cssText="display:block;font-weight:400;color:var(--muted)";w.textContent=r.kg+" kg";n.append(w)}
-    const sc=document.createElement("span");sc.className="score";sc.textContent=r.score;
-    li.append(a,n,sc);board.append(li);
+    li.append(a,n);board.append(li);
   });
 }
 
@@ -114,8 +176,10 @@ async function load(){
     status.textContent="Couldn't load scores. Make sure the sheet is shared as 'Anyone with the link'.";
   }
 }
-load();
+render();
+load();loadMatches();
 setInterval(load,REFRESH_SECONDS*1000);
+setInterval(loadMatches,REFRESH_SECONDS*1000);
 </script>
 </body>
 </html>
