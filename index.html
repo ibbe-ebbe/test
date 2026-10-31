@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Leaderboard</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--text:#14181f;--muted:#6b7380;--line:#e3e6ea;--accent:#0b6e4f;--gold:#c9961a;--silver:#8d96a3;--bronze:#a8643a}
+@media (prefers-color-scheme:dark){:root{--bg:#10141a;--card:#181d25;--text:#eef1f5;--muted:#8d96a3;--line:#262d38;--accent:#3ecf9a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.4 system-ui,sans-serif}
+main{max-width:640px;margin:0 auto;padding:24px 16px 48px}
+h1{margin:0 0 4px;font-size:1.6rem}
+#status{color:var(--muted);font-size:.85rem;margin-bottom:16px}
+ol{list-style:none;margin:0;padding:0;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+li{display:flex;align-items:center;gap:12px;padding:12px 16px;border-top:1px solid var(--line)}
+li:first-child{border-top:0}
+.rank{width:2rem;font-weight:700;color:var(--muted);text-align:center}
+li:nth-child(1) .rank{color:var(--gold)}
+li:nth-child(2) .rank{color:var(--silver)}
+li:nth-child(3) .rank{color:var(--bronze)}
+.name{flex:1;font-weight:600}
+#tabs{display:flex;gap:8px;margin-bottom:16px}
+#tabs button{flex:1;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--text);font:inherit;font-weight:600;cursor:pointer}
+#tabs button[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:#fff}
+.score{font-variant-numeric:tabular-nums;font-weight:700;color:var(--accent)}
+</style>
+</head>
+<body>
+<main>
+  <h1 id="title">Leaderboard</h1>
+  <div id="status">Loading…</div>
+  <div id="tabs"></div>
+  <ol id="board"></ol>
+</main>
+<script>
+// 1) Google Sheet: File > Share > Publish to web > pick the sheet tab > CSV > Publish. Paste the link here.
+const SHEET_ID = "16PDN7zge4Z4ZpaEwvpTB3EPTGFA5kKsQPahCpLzRino";
+const CSV_URLS = [
+  "https://docs.google.com/spreadsheets/d/"+SHEET_ID+"/gviz/tq?tqx=out:csv&sheet=Sheet1",
+  "https://docs.google.com/spreadsheets/d/"+SHEET_ID+"/export?format=csv"
+];
+const TITLE = "Strength Cartel Armwrestlers";
+const SUBTITLE = "Right Arm Open · Men's Division";
+const DIVISION = "M";           // "M", "F", or "" for everyone
+const MIN_KG = 0, MAX_KG = 999; // weight class filter
+const REFRESH_SECONDS = 60;     // auto-refresh
+
+document.getElementById("title").textContent = TITLE;
+document.title = TITLE;
+const sub=document.createElement("div");sub.style.cssText="color:var(--muted);margin-bottom:4px";sub.textContent=SUBTITLE;document.getElementById("title").after(sub);
+
+function parseCSV(text){
+  const rows=[];let row=[],cell="",q=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(q){ if(c=='"'&&text[i+1]=='"'){cell+='"';i++} else if(c=='"'){q=false} else cell+=c }
+    else if(c=='"') q=true;
+    else if(c==","){row.push(cell);cell=""}
+    else if(c=="\n"){row.push(cell);rows.push(row);row=[];cell=""}
+    else if(c!="\r") cell+=c;
+  }
+  if(cell||row.length){row.push(cell);rows.push(row)}
+  return rows;
+}
+
+let data=[],mode="right";
+const MODES=[["right","Right arm"],["left","Left arm"],["total","Total"]];
+const tabs=document.getElementById("tabs");
+MODES.forEach(([k,label])=>{
+  const b=document.createElement("button");b.textContent=label;
+  b.onclick=()=>{mode=k;render()};b.dataset.k=k;tabs.append(b);
+});
+
+function render(){
+  tabs.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.k===mode));
+  const board=document.getElementById("board");
+  const rows=data.filter(r=>(!DIVISION||r.gender===DIVISION)&&(r.kg==null||(r.kg>=MIN_KG&&r.kg<=MAX_KG)))
+    .map(r=>({name:r.name,kg:r.kg,score:mode==="total"?(r.left||0)+(r.right||0):r[mode]}))
+    .filter(r=>r.score!=null&&!isNaN(r.score))
+    .sort((a,b)=>b.score-a.score);
+  board.innerHTML="";
+  let rank=0,prev=null;
+  rows.forEach((r,i)=>{
+    if(r.score!==prev){rank=i+1;prev=r.score}
+    const li=document.createElement("li");
+    const a=document.createElement("span");a.className="rank";a.textContent=rank;
+    const n=document.createElement("span");n.className="name";n.textContent=r.name;
+    if(r.kg!=null){const w=document.createElement("small");w.style.cssText="display:block;font-weight:400;color:var(--muted)";w.textContent=r.kg+" kg";n.append(w)}
+    const sc=document.createElement("span");sc.className="score";sc.textContent=r.score;
+    li.append(a,n,sc);board.append(li);
+  });
+}
+
+async function load(){
+  const status=document.getElementById("status");
+  try{
+    let res=null;
+    for(const u of CSV_URLS){
+      try{ const r=await fetch(u+(u.includes("?")?"&":"?")+"t="+Date.now()); if(r.ok){res=r;break} }catch(e){}
+    }
+    if(!res) throw new Error("fetch failed");
+    const num=v=>{const n=parseFloat(v);return isNaN(n)?null:n};
+    data=parseCSV(await res.text()).slice(1)
+      .map(r=>({name:(r[0]||"").trim(),left:num(r[1]),right:num(r[2]),gender:(r[3]||"").trim().toUpperCase().charAt(0),kg:num(r[4])}))
+      .filter(r=>r.name);
+    render();
+    status.textContent=data.length?"Updated "+new Date().toLocaleTimeString():"No scores yet.";
+  }catch(e){
+    status.textContent="Couldn't load scores. Make sure the sheet is shared as 'Anyone with the link'.";
+  }
+}
+load();
+setInterval(load,REFRESH_SECONDS*1000);
+</script>
+</body>
+</html>
