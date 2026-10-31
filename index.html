@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Leaderboard</title>
 <style>
+@font-face{font-family:'Winner Sans';src:url('winner-sans-bold.otf') format('opentype');font-weight:700;font-display:swap}
 :root{--bg:#0b0b0d;--card:#151518;--text:#f2f2f2;--muted:#939598;--line:#2a2a30;--accent:#ee1856;--gold:#e6b422;--silver:#b8bcc4;--bronze:#c9803f;color-scheme:dark}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font:16px/1.4 system-ui,sans-serif}
@@ -29,7 +30,7 @@ h2{margin:28px 0 12px;font-size:1.1rem;text-transform:uppercase;letter-spacing:.
 .m .vs{font-weight:700}
 .m .when{color:var(--muted);font-size:.85rem;margin-top:2px}
 .m .cd{margin-top:8px;font-variant-numeric:tabular-nums;font-weight:700;color:var(--accent);font-size:1.15rem}
-h1{text-transform:uppercase;letter-spacing:.06em}
+h1{font-family:'Winner Sans',system-ui,sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
 .score{font-variant-numeric:tabular-nums;font-weight:700;color:var(--accent)}
 </style>
 </head>
@@ -50,7 +51,7 @@ const CSV_URLS = [
   "https://docs.google.com/spreadsheets/d/"+SHEET_ID+"/export?format=csv"
 ];
 const MATCH_URL = "https://docs.google.com/spreadsheets/d/"+SHEET_ID+"/gviz/tq?tqx=out:csv&sheet=Sheet2";
-const TITLE = "SC Armwrestlers";
+const TITLE = "SC Armwrestler";
 const SUBTITLES = {right:"Right Arm Open · Men's Division", left:"Left Arm Open · Men's Division", upcoming:"Upcoming Matches · Men's Division"};
 const DIVISION = "M";           // "M", "F", or "" for everyone
 const MIN_KG = 0, MAX_KG = 999; // weight class filter
