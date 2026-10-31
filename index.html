@@ -151,7 +151,7 @@ function render(){
   rows.forEach((r,i)=>{
     if(r.score!==prev){rank=i+1;prev=r.score}
     const li=document.createElement("li");
-    const a=document.createElement("span");a.className="rank";a.textContent=rank;
+    const a=document.createElement("span");a.className="rank";a.textContent=rank<=3?["🥇","🥈","🥉"][rank-1]:rank;if(rank<=3)a.style.fontSize="1.3rem";
     const n=document.createElement("span");n.className="name";n.textContent=r.name;
     if(r.kg!=null){const w=document.createElement("small");w.style.cssText="display:block;font-weight:400;color:var(--muted)";w.textContent=r.kg+" kg";n.append(w)}
     li.append(a,n);board.append(li);
