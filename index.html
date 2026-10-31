@@ -5,8 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Leaderboard</title>
 <style>
-:root{--bg:#f6f7f9;--card:#fff;--text:#14181f;--muted:#6b7380;--line:#e3e6ea;--accent:#0b6e4f;--gold:#c9961a;--silver:#8d96a3;--bronze:#a8643a}
-@media (prefers-color-scheme:dark){:root{--bg:#10141a;--card:#181d25;--text:#eef1f5;--muted:#8d96a3;--line:#262d38;--accent:#3ecf9a}}
+:root{--bg:#0b0b0d;--card:#151518;--text:#f2f2f2;--muted:#939598;--line:#2a2a30;--accent:#ee1856;--gold:#e6b422;--silver:#b8bcc4;--bronze:#c9803f;color-scheme:dark}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font:16px/1.4 system-ui,sans-serif}
 main{max-width:640px;margin:0 auto;padding:24px 16px 48px}
@@ -25,6 +24,7 @@ li:nth-child(3) .rank{color:var(--bronze)}
 #tabs{display:flex;gap:8px;margin-bottom:16px}
 #tabs button{flex:1;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--text);font:inherit;font-weight:600;cursor:pointer}
 #tabs button[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:#fff}
+h1{text-transform:uppercase;letter-spacing:.06em}
 .score{font-variant-numeric:tabular-nums;font-weight:700;color:var(--accent)}
 </style>
 </head>
@@ -44,14 +44,14 @@ const CSV_URLS = [
   "https://docs.google.com/spreadsheets/d/"+SHEET_ID+"/export?format=csv"
 ];
 const TITLE = "Strength Cartel Armwrestlers";
-const SUBTITLE = "Right Arm Open · Men's Division";
+const SUBTITLES = {right:"Right Arm Open · Men's Division", left:"Left Arm Open · Men's Division", total:"All Round · Men's Division"};
 const DIVISION = "M";           // "M", "F", or "" for everyone
 const MIN_KG = 0, MAX_KG = 999; // weight class filter
 const REFRESH_SECONDS = 60;     // auto-refresh
 
 document.getElementById("title").textContent = TITLE;
 document.title = TITLE;
-const sub=document.createElement("div");sub.style.cssText="color:var(--muted);margin-bottom:4px";sub.textContent=SUBTITLE;document.getElementById("title").after(sub);
+const sub=document.createElement("div");sub.style.cssText="color:var(--muted);margin-bottom:4px";sub.textContent=SUBTITLES.right;document.getElementById("title").after(sub);
 
 function parseCSV(text){
   const rows=[];let row=[],cell="",q=false;
@@ -76,6 +76,7 @@ MODES.forEach(([k,label])=>{
 });
 
 function render(){
+  sub.textContent=SUBTITLES[mode];
   tabs.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.k===mode));
   const board=document.getElementById("board");
   const rows=data.filter(r=>(!DIVISION||r.gender===DIVISION)&&(r.kg==null||(r.kg>=MIN_KG&&r.kg<=MAX_KG)))
