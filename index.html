@@ -100,7 +100,7 @@ function renderMatches(){
     const w=document.createElement("div");w.className="when";
     w.textContent=x.t.toLocaleString([],{weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
     let extra=null;
-    const info=[x.arm&&(/arm/i.test(x.arm)?x.arm:x.arm+" arm"),x.venue].filter(Boolean).join(" · ");
+    const info=[x.arm&&(/arm/i.test(x.arm)?x.arm:x.arm+" arm"),x.venue,x.format].filter(Boolean).join(" · ");
     if(info){const i=document.createElement("div");i.className="when";i.textContent=info;extra=i}
     const cd=document.createElement("div");cd.className="cd";cd.dataset.t=x.t.getTime();
     el.append(vs,w);if(extra)el.append(extra);el.append(cd);box.append(el);
@@ -123,7 +123,7 @@ async function loadMatches(){
     const r=await fetch(MATCH_URL+"&t="+Date.now());
     if(!r.ok) throw 0;
     const rows=parseCSV(await r.text()).slice(1);
-    matches=rows.map(r=>({t:parseWhen(r[0],r[1]),venue:(r[2]||"").trim(),a:(r[3]||"").trim(),b:(r[4]||"").trim(),arm:(r[5]||"").trim()}))
+    matches=rows.map(r=>({t:parseWhen(r[0],r[1]),venue:(r[2]||"").trim(),a:(r[3]||"").trim(),b:(r[4]||"").trim(),arm:(r[5]||"").trim(),format:(r[6]||"").trim()}))
       .filter(x=>x.a&&x.b&&x.t);
   }catch(e){matches=[]}
   renderMatches();
