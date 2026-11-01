@@ -1,187 +1,39 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Leaderboard</title>
+<title>Number buttons test</title>
 <style>
-@font-face{font-family:'Winner Sans';src:url('winner-sans-bold.otf') format('opentype');font-weight:700;font-display:swap}
-:root{--bg:#0b0b0d;--card:#151518;--text:#f2f2f2;--muted:#939598;--line:#2a2a30;--accent:#ee1856;--gold:#e6b422;--silver:#b8bcc4;--bronze:#c9803f;color-scheme:dark}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font:16px/1.4 system-ui,sans-serif}
-main{max-width:640px;margin:0 auto;padding:24px 16px 48px}
-#logo{display:block;max-width:180px;max-height:120px;width:auto;height:auto;margin:0 auto 12px}
-h1{margin:0 0 4px;font-size:1.6rem}
-h1,#title+div{text-align:center}
-#status{text-align:center;color:var(--muted);font-size:.85rem;margin-bottom:16px}
-ol{list-style:none;margin:0;padding:0;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden}
-li{display:flex;align-items:center;gap:12px;padding:12px 16px;border-top:1px solid var(--line)}
-li:first-child{border-top:0}
-.rank{width:2rem;font-weight:700;color:var(--muted);text-align:center}
-li:nth-child(1) .rank{color:var(--gold)}
-li:nth-child(2) .rank{color:var(--silver)}
-li:nth-child(3) .rank{color:var(--bronze)}
-.name{flex:1;font-weight:600}
-#tabs{display:flex;gap:8px;margin-bottom:16px}
-#tabs button{flex:1;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--text);font:inherit;font-weight:600;cursor:pointer}
-#tabs button[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:#fff}
-h2{margin:28px 0 12px;font-size:1.1rem;text-transform:uppercase;letter-spacing:.06em}
-.m{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:10px}
-.m .vs{font-weight:700}
-.m .when{color:var(--muted);font-size:.85rem;margin-top:2px}
-.m .cd{margin-top:8px;font-variant-numeric:tabular-nums;font-weight:700;color:var(--accent);font-size:1.15rem}
-h1{font-family:'Winner Sans',system-ui,sans-serif;color:#919598;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
-.score{font-variant-numeric:tabular-nums;font-weight:700;color:var(--accent)}
+  :root { --bg:#f6f4fb; --ink:#201a33; --accent:#7360f2; --green:#1f9d55; --muted:#6b6485; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#1a1626; --ink:#f1eefb; --muted:#a49cc0; }
+  }
+  html, body { margin:0; min-height:100%; background:var(--bg); color:var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width:420px; margin:0 auto; padding:32px 20px; }
+  h1 { font-size:1.4rem; margin:0 0 6px; }
+  p { color:var(--muted); margin:0 0 20px; line-height:1.45; }
+  a.btn { display:block; text-align:center; text-decoration:none; color:#fff;
+    background:var(--accent); padding:16px; border-radius:12px; font-size:1.05rem;
+    font-weight:600; margin-bottom:12px; }
+  a.call { background:var(--green); }
+  a.alt { background:transparent; color:var(--accent); border:2px solid var(--accent); }
+  a.btn:focus-visible { outline:3px solid var(--ink); outline-offset:2px; }
+  small { color:var(--muted); display:block; margin-top:20px; line-height:1.4; }
 </style>
 </head>
 <body>
 <main>
-  <img src="https://raw.githubusercontent.com/ibbe-ebbe/test/refs/heads/main/SCartel_Logo_L.png" alt="Strength Cartel logo" id="logo">
-  <h1 id="title">Leaderboard</h1>
-  <div id="status">Loading…</div>
-  <div id="tabs"></div>
-  <ol id="board"></ol>
-  <div id="matches" hidden></div>
+  <h1>+960 973 5659</h1>
+  <p>Open this page on your phone and tap a button.</p>
+
+  <a class="btn call" href="tel:+9609735659">Call number</a>
+  <a class="btn" href="viber://chat?number=%2B9609735659">Open Viber chat</a>
+  <a class="btn alt" href="viber://add?number=9609735659">Add in Viber</a>
+  <a class="btn alt" href="https://wa.me/9609735659">Open WhatsApp chat</a>
+
+  <small>Viber and WhatsApp must be installed. On a computer, only the call button may not work either.</small>
 </main>
-<script>
-// 1) Google Sheet: File > Share > Publish to web > pick the sheet tab > CSV > Publish. Paste the link here.
-const SHEET_ID = "16PDN7zge4Z4ZpaEwvpTB3EPTGFA5kKsQPahCpLzRino";
-const CSV_URLS = [
-  "https://docs.google.com/spreadsheets/d/"+SHEET_ID+"/gviz/tq?tqx=out:csv&sheet=Sheet1",
-  "https://docs.google.com/spreadsheets/d/"+SHEET_ID+"/export?format=csv"
-];
-const MATCH_URL = "https://docs.google.com/spreadsheets/d/"+SHEET_ID+"/gviz/tq?tqx=out:csv&sheet=Sheet2";
-const TITLE = "SC Armwrestlers";
-const SUBTITLES = {right:"Right Arm Open · Men's Division", left:"Left Arm Open · Men's Division", upcoming:"Upcoming Matches · Men's Division"};
-const DIVISION = "M";           // "M", "F", or "" for everyone
-const MIN_KG = 0, MAX_KG = 999; // weight class filter
-const REFRESH_SECONDS = 60;     // auto-refresh
-
-document.getElementById("title").textContent = TITLE;
-document.title = TITLE;
-const sub=document.createElement("div");sub.style.cssText="color:var(--muted);margin-bottom:4px";sub.textContent=SUBTITLES.right;document.getElementById("title").after(sub);
-
-function parseCSV(text){
-  const rows=[];let row=[],cell="",q=false;
-  for(let i=0;i<text.length;i++){
-    const c=text[i];
-    if(q){ if(c=='"'&&text[i+1]=='"'){cell+='"';i++} else if(c=='"'){q=false} else cell+=c }
-    else if(c=='"') q=true;
-    else if(c==","){row.push(cell);cell=""}
-    else if(c=="\n"){row.push(cell);rows.push(row);row=[];cell=""}
-    else if(c!="\r") cell+=c;
-  }
-  if(cell||row.length){row.push(cell);rows.push(row)}
-  return rows;
-}
-
-let data=[],mode="right",matches=[];
-// Sheet2 times are read as Maldives time (UTC+5)
-function parseWhen(dv,tv){
-  dv=(dv||"").trim();tv=(tv||"").trim();let m,y,mo,d,h=0,mi=0;
-  if(m=dv.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/)){y=+m[1];mo=+m[2];d=+m[3]}
-  else if(m=dv.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})/)){const a=+m[1],b=+m[2];y=+m[3];if(b>12){mo=a;d=b}else{d=a;mo=b}} // day-month-year by default
-  else{const x=new Date(dv+" 12:00 UTC");if(isNaN(x))return null;y=x.getUTCFullYear();mo=x.getUTCMonth()+1;d=x.getUTCDate()}
-  if(m=tv.match(/(\d{1,2}):(\d{2})(?::\d{2})?\s*([ap]m)?/i)){
-    h=+m[1];mi=+m[2];
-    if(m[3]){const pm=m[3].toLowerCase()==="pm";if(pm&&h<12)h+=12;if(!pm&&h===12)h=0}
-  }
-  const p=n=>String(n).padStart(2,"0");
-  const t=new Date(y+"-"+p(mo)+"-"+p(d)+"T"+p(h)+":"+p(mi)+":00+05:00");
-  return isNaN(t)?null:t;
-}
-function renderMatches(){
-  const box=document.getElementById("matches"),now=Date.now();
-  const up=matches.filter(x=>x.t.getTime()+2*3600e3>now).sort((a,b)=>a.t-b.t);
-  box.innerHTML="";
-  if(!up.length){box.innerHTML='<div class="m"><span class="when">No upcoming matches yet.</span></div>';return}
-  up.forEach(x=>{
-    const el=document.createElement("div");el.className="m";
-    const vs=document.createElement("div");vs.className="vs";vs.textContent=x.a+" vs "+x.b;
-    const w=document.createElement("div");w.className="when";
-    w.textContent=x.t.toLocaleString([],{weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
-    let extra=null;
-    const info=[x.arm&&(/arm/i.test(x.arm)?x.arm:x.arm+" arm"),x.venue,x.format].filter(Boolean).join(" · ");
-    if(info){const i=document.createElement("div");i.className="when";i.textContent=info;extra=i}
-    const cd=document.createElement("div");cd.className="cd";cd.dataset.t=x.t.getTime();
-    el.append(vs,w);if(extra)el.append(extra);el.append(cd);box.append(el);
-  });
-  tick();
-}
-function tick(){
-  document.querySelectorAll(".cd").forEach(e=>{
-    let ms=+e.dataset.t-Date.now();
-    if(ms<=0){e.textContent="LIVE NOW";return}
-    const d=Math.floor(ms/864e5);ms%=864e5;
-    const h=Math.floor(ms/36e5);ms%=36e5;
-    const m=Math.floor(ms/6e4),sec=Math.floor(ms%6e4/1e3),p=n=>String(n).padStart(2,"0");
-    e.textContent=(d?d+"d ":"")+p(h)+":"+p(m)+":"+p(sec);
-  });
-}
-setInterval(tick,1000);
-async function loadMatches(){
-  try{
-    const r=await fetch(MATCH_URL+"&t="+Date.now());
-    if(!r.ok) throw 0;
-    const rows=parseCSV(await r.text()).slice(1);
-    matches=rows.map(r=>({t:parseWhen(r[0],r[1]),venue:(r[2]||"").trim(),a:(r[3]||"").trim(),b:(r[4]||"").trim(),arm:(r[5]||"").trim(),format:(r[6]||"").trim()}))
-      .filter(x=>x.a&&x.b&&x.t);
-  }catch(e){matches=[]}
-  renderMatches();
-}
-const MODES=[["right","Right arm"],["left","Left arm"],["upcoming","Upcoming"]];
-const tabs=document.getElementById("tabs");
-MODES.forEach(([k,label])=>{
-  const b=document.createElement("button");b.textContent=label;
-  b.onclick=()=>{mode=k;render()};b.dataset.k=k;tabs.append(b);
-});
-
-function render(){
-  sub.textContent=SUBTITLES[mode];
-  tabs.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.k===mode));
-  const board=document.getElementById("board");
-  const up=mode==="upcoming";
-  board.hidden=up;document.getElementById("matches").hidden=!up;
-  if(up){return}
-  const rows=data.filter(r=>(!DIVISION||r.gender===DIVISION)&&(r.kg==null||(r.kg>=MIN_KG&&r.kg<=MAX_KG)))
-    .map(r=>({name:r.name,kg:r.kg,score:r[mode]}))
-    .filter(r=>r.score!=null&&!isNaN(r.score))
-    .sort((a,b)=>b.score-a.score);
-  board.innerHTML="";
-  if(!rows.length){board.innerHTML='<li style="justify-content:center;color:var(--muted)">No rankings yet</li>';return}
-  let rank=0,prev=null;
-  rows.forEach((r,i)=>{
-    if(r.score!==prev){rank=i+1;prev=r.score}
-    const li=document.createElement("li");
-    const a=document.createElement("span");a.className="rank";a.textContent=rank<=3?["🥇","🥈","🥉"][rank-1]:rank;if(rank<=3)a.style.fontSize="1.3rem";
-    const n=document.createElement("span");n.className="name";n.textContent=r.name;
-    if(r.kg!=null){const w=document.createElement("small");w.style.cssText="display:block;font-weight:400;color:var(--muted)";w.textContent=r.kg+" kg";n.append(w)}
-    li.append(a,n);board.append(li);
-  });
-}
-
-async function load(){
-  const status=document.getElementById("status");
-  try{
-    let res=null;
-    for(const u of CSV_URLS){
-      try{ const r=await fetch(u+(u.includes("?")?"&":"?")+"t="+Date.now()); if(r.ok){res=r;break} }catch(e){}
-    }
-    if(!res) throw new Error("fetch failed");
-    const num=v=>{const n=parseFloat(v);return isNaN(n)?null:n};
-    data=parseCSV(await res.text()).slice(1)
-      .map(r=>({name:(r[0]||"").trim(),left:num(r[1]),right:num(r[2]),gender:(r[3]||"").trim().toUpperCase().charAt(0),kg:num(r[4])}))
-      .filter(r=>r.name);
-    render();
-    status.textContent=data.length?"Updated "+new Date().toLocaleTimeString():"No scores yet.";
-  }catch(e){
-    status.textContent="Couldn't load scores. Make sure the sheet is shared as 'Anyone with the link'.";
-  }
-}
-render();
-load();loadMatches();
-setInterval(load,REFRESH_SECONDS*1000);
-setInterval(loadMatches,REFRESH_SECONDS*1000);
-</script>
 </body>
 </html>
